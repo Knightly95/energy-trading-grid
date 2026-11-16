@@ -1,4 +1,9 @@
 interface Config {
+  /**
+   * `mock` (default): REST and WebSocket traffic is simulated in the browser, so
+   * the app runs with no servers. `live`: talk to the servers in `api/`.
+   */
+  backend: 'mock' | 'live';
   api: {
     baseUrl: string;
   };
@@ -8,10 +13,11 @@ interface Config {
 }
 
 export const config: Config = {
+  backend: import.meta.env.VITE_BACKEND === 'live' ? 'live' : 'mock',
   api: {
-    baseUrl: 'http://localhost:3000',
+    baseUrl: import.meta.env.VITE_API_URL || 'http://localhost:3000',
   },
   socket: {
-    url: 'http://localhost:4001',
+    url: import.meta.env.VITE_SOCKET_URL || 'http://localhost:4001',
   },
 };

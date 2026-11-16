@@ -8,8 +8,8 @@
     "dev": "vite",
     "api": "cd api && npm run dev",
     "ws": "cd api && npm run ws",
-    "dev:all": "concurrently \"npm run dev\" \"npm run api\" \"npm run ws\" --names \"frontend,rest-api,websocket\" --prefix-colors \"cyan,yellow,magenta\"",
-    "preview": "npm run build && npm run preview:withoutBuild",
+    "dev:all": "concurrently \"npm run dev:live\" \"npm run api\" \"npm run ws\" --names \"frontend,rest-api,websocket\" --prefix-colors \"cyan,yellow,magenta\"",
+    "preview": "npm run build:live && npm run preview:withoutBuild",
     "build": "tsc -b && vite build",
     "lint": "eslint .",
     "format": "prettier --write \"src/**/*.{ts,tsx,js,jsx,json,css,md}\" \"e2e/**/*.{ts,tsx,js,jsx,json,css,md}\"",
@@ -22,7 +22,9 @@
     "test:e2e:ui": "playwright test --ui",
     "test:e2e:headed": "playwright test --headed",
     "test:e2e:debug": "playwright test --debug",
-    "prepare": "husky"
+    "prepare": "husky",
+    "dev:live": "vite --mode live",
+    "build:live": "tsc -b && vite build --mode live"
   },
   "dependencies": {
     "@emotion/cache": "^11.14.0",
