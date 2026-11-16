@@ -1,12 +1,20 @@
 # Energy Trading Grid
 
 [![CI & Deploy](https://github.com/Knightly95/energy-trading-grid/actions/workflows/deploy.yml/badge.svg)](https://github.com/Knightly95/energy-trading-grid/actions/workflows/deploy.yml)
+[![Coverage](https://img.shields.io/endpoint?url=https%3A%2F%2Fknightly95.github.io%2Fenergy-trading-grid%2Fcoverage-badge.json)](#testing)
 
 **[▶ Live demo](https://knightly95.github.io/energy-trading-grid/)**: runs entirely in your browser, with a simulated live data feed. No sign-up or backend is needed.
 
 > **Background:** I built this project as a take-home for a frontend technical assessment in a hiring process, then moved it to my personal account and added an in-browser backend so anyone can try it. The commit history is the original one. The small Node.js servers in [`api/`](api) came with the assessment's starter template.
 
 A real-time marketplace for energy offers, built with React and TypeScript. Offers for solar and gas energy arrive over a WebSocket and the grid updates as they are created, changed and removed.
+
+## Screenshots
+
+| Live offers grid | Form generated from JSON |
+| --- | --- |
+| [![Live offers grid with a filter by energy source and a status for each offer](docs/screenshots/offers-grid.png)](docs/screenshots/offers-grid.png) | [![Create offering form with the fields for a solar offering](docs/screenshots/offering-form.png)](docs/screenshots/offering-form.png) |
+| Offers arrive over a WebSocket; rows are added, updated and removed as they change. | Choosing an energy source builds the form for it from the JSON configuration. |
 
 ## Features
 
@@ -66,11 +74,15 @@ The app talks to two services:
 - **Unit and integration** (Vitest, React Testing Library): stores, services, form conversion, pages, shared components, and the in-browser socket server.
 - **End-to-end** (Playwright): the offers list and the offering add, edit and list flows, written with page objects and run against the real local servers.
 
+CI measures line coverage of the unit and integration tests on every push to `main` and publishes the number shown in the badge above.
+
 ## Deployment
 
 Every push to `main` is linted, tested (unit and end-to-end), built and deployed to GitHub Pages by [`.github/workflows/deploy.yml`](.github/workflows/deploy.yml).
 
 ## Documentation
 
+- [`CONTRIBUTING.md`](CONTRIBUTING.md): setup, checks, conventions and how to propose a change.
+- [`AGENTS.md`](AGENTS.md): commands, rules and guardrails for AI coding agents.
 - [`architecture-decision-record.md`](architecture-decision-record.md): the reasoning behind Zustand, Socket.io, Material UI, the JSON-driven forms and the testing setup, with the trade-offs considered.
 - [`api/README.md`](api/README.md): the REST and WebSocket servers.

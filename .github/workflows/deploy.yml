@@ -32,8 +32,8 @@ jobs:
       - name: Lint
         run: npm run lint
 
-      - name: Unit and integration tests
-        run: npx vitest run
+      - name: Unit and integration tests with coverage
+        run: npx vitest run --coverage --coverage.reporter=json-summary --coverage.reporter=text-summary
 
       - name: End-to-end tests (against the local servers)
         run: |
@@ -49,6 +49,10 @@ jobs:
       # so deep links like /offers work on reload.
       - name: SPA fallback
         run: cp dist/index.html dist/404.html
+
+      # Published with the site and read by the shields.io badge in the README.
+      - name: Coverage badge data
+        run: node scripts/coverage-badge.js coverage/coverage-summary.json dist/coverage-badge.json
 
       - uses: actions/upload-pages-artifact@v3
         if: github.ref == 'refs/heads/main'
