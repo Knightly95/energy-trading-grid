@@ -10,6 +10,9 @@ export default defineConfig({
         inline: ['@mui/x-data-grid', '@mui/x-data-grid-pro', '@mui/x-data-grid-premium'],
       },
     },
+    // Unit tests exercise the real network code paths; the in-browser mock
+    // backend has its own tests.
+    env: { VITE_BACKEND: 'live' },
     globals: true,
     environment: 'jsdom',
     setupFiles: ['./src/testing/setup.ts'],

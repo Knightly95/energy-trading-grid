@@ -24,7 +24,13 @@ const getEnergyOfferings = () => {
   }
 };
 
-const getOrders = () => {
+interface Order {
+  id: string;
+  source?: string;
+  status?: string;
+}
+
+const getOrders = (): Order[] => {
   try {
     const ordersPath = join(__dirname, 'config', 'orders.json');
     const data = readFileSync(ordersPath, 'utf-8');
@@ -60,11 +66,11 @@ app.get('/api/orders', (req: Request, res: Response) => {
     let filteredOrders = orders;
 
     if (source) {
-      filteredOrders = filteredOrders.filter((order: any) => order.source === source);
+      filteredOrders = filteredOrders.filter((order) => order.source === source);
     }
 
     if (status) {
-      filteredOrders = filteredOrders.filter((order: any) => order.status === status);
+      filteredOrders = filteredOrders.filter((order) => order.status === status);
     }
 
     res.json(filteredOrders);
@@ -79,7 +85,7 @@ app.get('/api/orders', (req: Request, res: Response) => {
 app.get('/api/orders/:id', (req: Request, res: Response) => {
   try {
     const orders = getOrders();
-    const order = orders.find((o: any) => o.id === req.params.id);
+    const order = orders.find((o) => o.id === req.params.id);
 
     if (!order) {
       res.status(404).json({ error: 'Order not found' });

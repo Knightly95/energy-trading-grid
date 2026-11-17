@@ -2,6 +2,8 @@ import { io, Socket } from 'socket.io-client';
 
 import type { Offer } from '@/shared/types/offer';
 import { config } from '@/config';
+import { MockSocket } from '@/mocks/mockSocket';
+import seedOffers from '@/mocks/data/offers.json';
 
 import type {
   OfferRemovedPayload,
@@ -24,11 +26,15 @@ class SocketService {
     }
 
     this.connectionStatus = 'connecting';
-    this.socket = io(config.socket.url, {
-      reconnection: true,
-      reconnectionDelay: 1000,
-      reconnectionAttempts: 5,
-    });
+    this.socket =
+      config.backend === 'mock'
+        ? // The mock implements the subset of the Socket API this service uses.
+          (new MockSocket(seedOffers as Offer[]) as unknown as Socket)
+        : io(config.socket.url, {
+            reconnection: true,
+            reconnectionDelay: 1000,
+            reconnectionAttempts: 5,
+          });
 
     this.setupEventListeners();
   }
