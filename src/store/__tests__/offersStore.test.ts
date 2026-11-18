@@ -44,6 +44,29 @@ describe('useOffersStore', () => {
     expect(useOffersStore.getState().offers).toEqual([mockOffer2]);
   });
 
+  it('should apply a batch of changes in order', () => {
+    const mockOffer3 = createMockOffer({ id: '3', vendor: 'VendorC' });
+    useOffersStore.getState().setOffers([mockOffer1, mockOffer2]);
+    const updated = { ...mockOffer2, price: 250 };
+
+    useOffersStore.getState().applyOfferChanges([
+      { type: 'updated', offer: updated },
+      { type: 'created', offer: mockOffer3 },
+      { type: 'removed', id: mockOffer1.id },
+      { type: 'updated', offer: createMockOffer({ id: 'unknown' }) },
+    ]);
+
+    expect(useOffersStore.getState().offers).toEqual([updated, mockOffer3]);
+  });
+
+  it('should keep unchanged offers as the same objects after a batch', () => {
+    useOffersStore.getState().setOffers([mockOffer1, mockOffer2]);
+    useOffersStore
+      .getState()
+      .applyOfferChanges([{ type: 'updated', offer: { ...mockOffer2, price: 1 } }]);
+    expect(useOffersStore.getState().offers[0]).toBe(mockOffer1);
+  });
+
   it('should clear all offers and metrics', () => {
     useOffersStore.getState().setOffers([mockOffer1, mockOffer2]);
     useOffersStore.getState().setMetrics({ totalOffers: 2, avgPrice: 150 });

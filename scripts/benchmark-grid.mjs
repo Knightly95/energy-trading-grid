@@ -2,7 +2,9 @@
 // Measures the offers grid under load, with MUI's row virtualization on and
 // off. Builds nothing itself: run `npm run build` first.
 //
-//   node scripts/benchmark-grid.mjs [--rows 1000] [--tick-ms 20] [--runs 3]
+//   node scripts/benchmark-grid.mjs [--rows 1000] [--tick-ms 20] [--runs 3] [--dir dist]
+//
+// `--dir` serves another build folder, to compare two versions of the app.
 //
 // Load: the in-browser backend is seeded with `rows` offers and makes one
 // change (create, update, remove or metric) every `tick-ms`; the grid shows
@@ -14,16 +16,21 @@ const arg = (name, fallback) => {
   const index = process.argv.indexOf(`--${name}`);
   return index === -1 ? fallback : Number(process.argv[index + 1]);
 };
+const textArg = (name, fallback) => {
+  const index = process.argv.indexOf(`--${name}`);
+  return index === -1 ? fallback : process.argv[index + 1];
+};
 const rows = arg('rows', 1000);
 const tickMs = arg('tick-ms', 20);
 const runs = arg('runs', 3);
+const dir = textArg('dir', 'dist');
 const port = 4180;
 const measureMs = 5000;
 
 // Started with node directly (no shell), so killing it at the end also works on Windows.
 const server = spawn(
   process.execPath,
-  ['node_modules/vite/bin/vite.js', 'preview', '--port', String(port), '--strictPort'],
+  ['node_modules/vite/bin/vite.js', 'preview', '--outDir', dir, '--port', String(port), '--strictPort'],
   { stdio: 'ignore' },
 );
 const base = `http://localhost:${port}`;
@@ -100,7 +107,7 @@ try {
 }
 
 const round = (value) => Math.round(value);
-console.log(`\n${rows} offers, one change every ${tickMs} ms, 100 rows per page, CPU 4x slower, median of ${runs} runs\n`);
+console.log(`\n${dir}: ${rows} offers, one change every ${tickMs} ms, 100 rows per page, CPU 4x slower, median of ${runs} runs\n`);
 console.log('| Virtualization | Frames per second | Worst frame | Main thread blocked (5 s) | Rows in the DOM | Grid DOM nodes | First rows shown |');
 console.log('|---|---|---|---|---|---|---|');
 for (const [mode, r] of Object.entries(results)) {
