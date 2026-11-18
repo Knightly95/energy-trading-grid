@@ -34,3 +34,7 @@ playwright/.cache/
 
 # TypeScript build info
 tsconfig.e2e.tsbuildinfo
+
+# Lighthouse CI
+.lighthouseci
+lighthouse-report
