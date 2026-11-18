@@ -1,5 +1,10 @@
-import { useState } from 'react';
-import { DataGrid, type GridColDef } from '@mui/x-data-grid';
+import { useCallback, useMemo, useState } from 'react';
+import {
+  DataGrid,
+  type GridCellParams,
+  type GridColDef,
+  type GridRowClassNameParams,
+} from '@mui/x-data-grid';
 import Paper from '@mui/material/Paper';
 import IconButton from '@mui/material/IconButton';
 import Menu from '@mui/material/Menu';
@@ -27,6 +32,11 @@ export interface DataTableProps<T extends { id: string | number }> {
   checkboxSelection?: boolean;
   pageSizeOptions?: number[];
   sx?: SxProps<Theme>;
+  /**
+   * Height of the grid. Rows beyond it scroll inside the grid, which lets it
+   * render only the visible rows.
+   */
+  height?: number | string;
 }
 
 export function DataTable<T extends { id: string | number }>({
@@ -36,18 +46,13 @@ export function DataTable<T extends { id: string | number }>({
   checkboxSelection = false,
   pageSizeOptions = [10, 25, 50, 100],
   sx,
+  height = 640,
 }: DataTableProps<T>) {
   const bench = readBenchmarkOptions();
   const paginationModel = { page: 0, pageSize: bench.pageSize ?? pageSizeOptions[0] };
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const [selectedRow, setSelectedRow] = useState<T | null>(null);
   const { newRows, changedCells } = useRowChangeDetection(rows);
-
-  const handleMenuClick = (event: React.MouseEvent<HTMLElement>, row: T) => {
-    event.stopPropagation();
-    setAnchorEl(event.currentTarget);
-    setSelectedRow(row);
-  };
 
   const handleMenuClose = () => {
     setAnchorEl(null);
@@ -60,30 +65,51 @@ export function DataTable<T extends { id: string | number }>({
     handleMenuClose();
   };
 
-  const actionsColumn: GridColDef = {
-    field: 'actions',
-    headerName: 'Actions',
-    width: 80,
-    sortable: false,
-    filterable: false,
-    renderCell: (params) => {
-      const row = params.row as T;
-      const rowActions = typeof actions === 'function' ? actions(row) : actions;
-      if (!rowActions || rowActions.length === 0) return null;
+  // Built once per set of columns and actions, so the grid does not
+  // recompute its columns on every live update.
+  const allColumns = useMemo(() => {
+    if (!actions || (Array.isArray(actions) && actions.length === 0)) return columns;
+    const actionsColumn: GridColDef = {
+      field: 'actions',
+      headerName: 'Actions',
+      width: 80,
+      sortable: false,
+      filterable: false,
+      renderCell: (params) => {
+        const row = params.row as T;
+        const rowActions = typeof actions === 'function' ? actions(row) : actions;
+        if (rowActions.length === 0) return null;
 
-      return (
-        <IconButton onClick={(e) => handleMenuClick(e, row)} size="small">
-          <MoreVertIcon />
-        </IconButton>
-      );
-    },
-  };
+        return (
+          <IconButton
+            onClick={(event) => {
+              event.stopPropagation();
+              setAnchorEl(event.currentTarget);
+              setSelectedRow(row);
+            }}
+            size="small"
+          >
+            <MoreVertIcon />
+          </IconButton>
+        );
+      },
+    };
+    return [actionsColumn, ...columns];
+  }, [actions, columns]);
 
-  const allColumns = actions && actions.length > 0 ? [actionsColumn, ...columns] : columns;
+  const getRowClassName = useCallback(
+    (params: GridRowClassNameParams) => (newRows.has(params.id) ? 'row-flash-new' : ''),
+    [newRows],
+  );
+  const getCellClassName = useCallback(
+    (params: GridCellParams) =>
+      changedCells.get(params.id)?.has(params.field) ? 'cell-flash-changed' : '',
+    [changedCells],
+  );
 
   return (
     <>
-      <Paper sx={{ width: '100%', ...sx }}>
+      <Paper sx={{ width: '100%', height, ...sx }}>
         <DataGrid
           rows={rows}
           columns={allColumns}
@@ -91,11 +117,8 @@ export function DataTable<T extends { id: string | number }>({
           pageSizeOptions={pageSizeOptions}
           disableVirtualization={!bench.virtualization}
           checkboxSelection={checkboxSelection}
-          getRowClassName={(params) => (newRows.has(params.id) ? 'row-flash-new' : '')}
-          getCellClassName={(params) => {
-            const changedFields = changedCells.get(params.id);
-            return changedFields && changedFields.has(params.field) ? 'cell-flash-changed' : '';
-          }}
+          getRowClassName={getRowClassName}
+          getCellClassName={getCellClassName}
           sx={dataGridAnimationStyles}
         />
       </Paper>

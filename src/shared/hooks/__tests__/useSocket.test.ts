@@ -6,6 +6,7 @@ import {
   mockAddOffer,
   mockUpdateOffer,
   mockRemoveOffer,
+  mockApplyOfferChanges,
   mockSetConnectionStatus,
   mockSetMetrics,
   mockClearOffers,
@@ -23,6 +24,7 @@ vi.mock('@/store/offersStore', () => ({
     mockAddOffer,
     mockUpdateOffer,
     mockRemoveOffer,
+    mockApplyOfferChanges,
     mockSetConnectionStatus,
     mockSetMetrics,
     mockClearOffers,
@@ -37,7 +39,7 @@ vi.mock('@/shared/services/socket/socketService', () => ({
 import * as OffersStoreImport from '@/store/offersStore';
 import * as SocketServiceImport from '@/shared/services/socket/socketService';
 import { renderHook } from '@testing-library/react';
-import { useSocket } from '../useSocket';
+import { LIVE_UPDATE_INTERVAL_MS, useSocket } from '../useSocket';
 
 const OffersStore = OffersStoreImport as typeof OffersStoreImport & {
   __mocks: Record<string, Mock>;
@@ -50,6 +52,10 @@ describe('useSocket', () => {
   beforeEach(() => {
     resetOfferStoreMocks();
     resetSocketServiceMocks();
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
   });
 
   it('connects and sets status on mount', () => {
@@ -84,10 +90,14 @@ describe('useSocket', () => {
     SocketService.__mocks.onOfferCreated.mockImplementationOnce((cb: typeof handler) => {
       handler = cb;
     });
+    vi.useFakeTimers();
     renderHook(() => useSocket());
     const offer = { id: '2' };
     handler(offer);
-    expect(OffersStore.__mocks.mockAddOffer).toHaveBeenCalledWith(offer);
+    vi.advanceTimersByTime(LIVE_UPDATE_INTERVAL_MS);
+    expect(OffersStore.__mocks.mockApplyOfferChanges).toHaveBeenCalledWith([
+      { type: 'created', offer },
+    ]);
   });
 
   it('handles offer updated event', () => {
@@ -95,10 +105,14 @@ describe('useSocket', () => {
     SocketService.__mocks.onOfferUpdated.mockImplementationOnce((cb: typeof handler) => {
       handler = cb;
     });
+    vi.useFakeTimers();
     renderHook(() => useSocket());
     const offer = { id: '3', status: 'active' };
     handler(offer);
-    expect(OffersStore.__mocks.mockUpdateOffer).toHaveBeenCalledWith(offer);
+    vi.advanceTimersByTime(LIVE_UPDATE_INTERVAL_MS);
+    expect(OffersStore.__mocks.mockApplyOfferChanges).toHaveBeenCalledWith([
+      { type: 'updated', offer },
+    ]);
   });
 
   it('handles offer removed event', () => {
@@ -106,9 +120,56 @@ describe('useSocket', () => {
     SocketService.__mocks.onOfferRemoved.mockImplementationOnce((cb: typeof handler) => {
       handler = cb;
     });
+    vi.useFakeTimers();
     renderHook(() => useSocket());
     handler({ id: '4' });
-    expect(OffersStore.__mocks.mockRemoveOffer).toHaveBeenCalledWith('4');
+    vi.advanceTimersByTime(LIVE_UPDATE_INTERVAL_MS);
+    expect(OffersStore.__mocks.mockApplyOfferChanges).toHaveBeenCalledWith([
+      { type: 'removed', id: '4' },
+    ]);
+  });
+
+  it('applies the changes of one interval together, in order', () => {
+    let created: (offer: { id: string }) => void = () => {};
+    let removed: (payload: { id: string }) => void = () => {};
+    SocketService.__mocks.onOfferCreated.mockImplementationOnce((cb: typeof created) => {
+      created = cb;
+    });
+    SocketService.__mocks.onOfferRemoved.mockImplementationOnce((cb: typeof removed) => {
+      removed = cb;
+    });
+    vi.useFakeTimers();
+    renderHook(() => useSocket());
+
+    created({ id: '5' });
+    removed({ id: '1' });
+    expect(OffersStore.__mocks.mockApplyOfferChanges).not.toHaveBeenCalled();
+    vi.advanceTimersByTime(LIVE_UPDATE_INTERVAL_MS);
+
+    expect(OffersStore.__mocks.mockApplyOfferChanges).toHaveBeenCalledTimes(1);
+    expect(OffersStore.__mocks.mockApplyOfferChanges).toHaveBeenCalledWith([
+      { type: 'created', offer: { id: '5' } },
+      { type: 'removed', id: '1' },
+    ]);
+  });
+
+  it('drops changes not applied yet when the full list arrives', () => {
+    let init: (offers: Array<{ id: string }>) => void = () => {};
+    let created: (offer: { id: string }) => void = () => {};
+    SocketService.__mocks.onOffersInit.mockImplementationOnce((cb: typeof init) => {
+      init = cb;
+    });
+    SocketService.__mocks.onOfferCreated.mockImplementationOnce((cb: typeof created) => {
+      created = cb;
+    });
+    vi.useFakeTimers();
+    renderHook(() => useSocket());
+
+    created({ id: '6' });
+    init([{ id: '6' }]);
+    vi.advanceTimersByTime(LIVE_UPDATE_INTERVAL_MS);
+
+    expect(OffersStore.__mocks.mockApplyOfferChanges).not.toHaveBeenCalled();
   });
 
   it('handles metrics event', () => {
