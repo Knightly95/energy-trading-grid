@@ -4,6 +4,7 @@ export const mockSetOffers = vi.fn();
 export const mockAddOffer = vi.fn();
 export const mockUpdateOffer = vi.fn();
 export const mockRemoveOffer = vi.fn();
+export const mockApplyOfferChanges = vi.fn();
 export const mockSetConnectionStatus = vi.fn();
 export const mockSetMetrics = vi.fn();
 export const mockClearOffers = vi.fn();
@@ -17,6 +18,7 @@ export function mockUseOffersStore<T = Partial<OffersState>>(
     addOffer: mockAddOffer,
     updateOffer: mockUpdateOffer,
     removeOffer: mockRemoveOffer,
+    applyOfferChanges: mockApplyOfferChanges,
     setConnectionStatus: mockSetConnectionStatus,
     setMetrics: mockSetMetrics,
     clearOffers: mockClearOffers,
@@ -29,6 +31,7 @@ export function resetOfferStoreMocks() {
   mockAddOffer.mockReset();
   mockUpdateOffer.mockReset();
   mockRemoveOffer.mockReset();
+  mockApplyOfferChanges.mockReset();
   mockSetConnectionStatus.mockReset();
   mockSetMetrics.mockReset();
   mockClearOffers.mockReset();

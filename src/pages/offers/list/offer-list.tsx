@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 // import { useNavigate } from 'react-router-dom';
 import { Container, Typography, Box } from '@mui/material';
 
@@ -21,7 +21,8 @@ export default function OfferList() {
   const [viewingOffer, setViewingOffer] = useState<Offer | null>(null);
   // const navigate = useNavigate();
 
-  const getRowActions = (offer: Offer): RowAction<Offer>[] => {
+  // Stable between renders, so the grid keeps its columns on live updates.
+  const getRowActions = useCallback((offer: Offer): RowAction<Offer>[] => {
     const actions: RowAction<Offer>[] = [
       {
         label: 'View Details',
@@ -49,13 +50,16 @@ export default function OfferList() {
     }
 
     return actions;
-  };
+  }, []);
 
-  const filteredOffers = [
-    ...(selectedSources.length === 0
-      ? offers
-      : offers.filter((offer) => selectedSources.includes(offer.sourceType))),
-  ].sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
+  const filteredOffers = useMemo(
+    () =>
+      (selectedSources.length === 0
+        ? [...offers]
+        : offers.filter((offer) => selectedSources.includes(offer.sourceType))
+      ).sort((a, b) => b.updatedAt - a.updatedAt),
+    [offers, selectedSources],
+  );
 
   const handleSourceToggle = (source: SourceType) => {
     setSelectedSources((prev) =>

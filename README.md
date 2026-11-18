@@ -78,23 +78,28 @@ CI measures line coverage of the unit and integration tests on every push to `ma
 
 ## Performance
 
-`node scripts/benchmark-grid.mjs` (after `npm run build`) measures the offers grid in a real browser, with MUI's row virtualization on and off. It uses opt-in URL parameters (`bench-rows`, `bench-tick-ms`, `bench-page-size`, `bench-virtualization`; see `src/shared/utils/benchmark.ts`) to seed the in-browser backend with more offers and make it change them faster. The CPU is slowed down 4× to resemble a mid-range laptop. Results are the median of 3 runs over 5 seconds, measured 18 Nov 2026:
+`node scripts/benchmark-grid.mjs` (after `npm run build`) measures the offers grid in a real browser. It uses opt-in URL parameters (`bench-rows`, `bench-tick-ms`, `bench-page-size`, `bench-virtualization`; see `src/shared/utils/benchmark.ts`) to seed the in-browser backend with more offers and make it change them faster, and shows 100 rows per page. The CPU is slowed down 4× to resemble a mid-range laptop. `--dir` serves another build folder, so two versions can be compared back to back.
 
-| Load | Rows per page | Virtualization on | Virtualization off |
+### Before and after the fix
+
+Median of 3 runs over 5 seconds, both builds measured back to back on 18 Nov 2026:
+
+| Load | Frames per second, before → after | Main thread busy, before → after | First rows shown, before → after |
 |---|---|---|---|
-| Demo: 32 offers, one change every 4 s | 32 | 58 fps | 60 fps |
-| 1,000 offers, 5 changes per second | 100 | 10 fps | 8 fps |
-| 1,000 offers, 50 changes per second | 100 | 5 fps | 5 fps |
-| 100 offers, 50 changes per second | 100 | 5 fps | 6 fps |
+| Demo: 32 offers, one change every 4 s | 52 → 57 | 16% → 6% | 1.8 s → 1.8 s |
+| 1,000 offers, 5 changes per second | 3 → 37 | 96% → 41% | 5.8 s → 1.7 s |
+| 1,000 offers, 50 changes per second | 3 → 30 | 98% → 55% | 4.4 s → 1.8 s |
+| 100 offers, 50 changes per second | 3 → 32 | 100% → 52% | 5.8 s → 1.7 s |
 
-What this shows:
+What was slow: every single server change re-rendered the whole grid, and each render redid work that hadn't changed (the column definitions, a new number formatter per price cell, a field-by-field comparison of every row). The grid also grew to fit all its rows, so MUI's virtualization had nothing to skip.
 
-- At the demo's real load the grid is smooth.
-- Under heavy load the page stops being responsive: the main thread is busy more than 90% of the time.
-- Virtualization makes no difference here. The grid grows to fit its rows instead of scrolling inside a fixed height, so all 100 rows of a page are always rendered.
-- A CPU profile shows the cost is re-rendering the whole grid on every single change (plus the highlight timers), not the DOM size.
+What changed:
 
-Next step: apply incoming changes in batches, at most once per frame, and measure again with the same script.
+- **Changes are applied in batches.** `useSocket` collects incoming changes and applies them together every 250 ms (`LIVE_UPDATE_INTERVAL_MS`), in one store update (`applyOfferChanges`). A quarter of a second is too short to notice, and the grid renders at most 4 times a second however busy the feed is.
+- **Less work per render.** The columns, row actions and class-name callbacks are memoized; the number and date formatters are created once; the change-detection hook skips rows whose object didn't change.
+- **Virtualization works.** The grid has a fixed height (640 px, which fits one default page of 10 rows) and scrolls inside it, so only the visible rows are in the DOM: 14 instead of 100 at 100 rows per page.
+
+The fixed height matters most. With the same changes but virtualization turned off, the busy loads reach only 7–10 fps.
 
 ## Deployment
 

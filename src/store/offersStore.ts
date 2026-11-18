@@ -8,6 +8,12 @@ interface OfferMetrics {
   avgPrice: number;
 }
 
+/** One change pushed by the server, applied with others in a batch. */
+export type OfferChange =
+  | { type: 'created'; offer: Offer }
+  | { type: 'updated'; offer: Offer }
+  | { type: 'removed'; id: string };
+
 export interface OffersState {
   offers: Offer[];
   connectionStatus: ConnectionStatus;
@@ -17,6 +23,8 @@ export interface OffersState {
   addOffer: (offer: Offer) => void;
   updateOffer: (offer: Offer) => void;
   removeOffer: (offerId: string) => void;
+  /** Applies several server changes in one store update, so the grid renders once. */
+  applyOfferChanges: (changes: OfferChange[]) => void;
   setConnectionStatus: (status: ConnectionStatus) => void;
   setMetrics: (metrics: OfferMetrics) => void;
   clearOffers: () => void;
@@ -43,6 +51,19 @@ export const useOffersStore = create<OffersState>((set, get) => ({
     set((state) => ({
       offers: state.offers.filter((offer) => offer.id !== offerId),
     })),
+
+  applyOfferChanges: (changes) =>
+    set((state) => {
+      // A Map keeps the list order, and updates and removals by id cost O(1).
+      const byId = new Map(state.offers.map((offer) => [offer.id, offer]));
+      for (const change of changes) {
+        if (change.type === 'removed') byId.delete(change.id);
+        else if (change.type === 'created' || byId.has(change.offer.id)) {
+          byId.set(change.offer.id, change.offer);
+        }
+      }
+      return { offers: [...byId.values()] };
+    }),
 
   setConnectionStatus: (status) => set({ connectionStatus: status }),
 

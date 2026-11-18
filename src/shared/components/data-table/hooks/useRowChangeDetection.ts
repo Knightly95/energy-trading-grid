@@ -28,12 +28,18 @@ export function useRowChangeDetection<T extends { id: string | number }>(
 
       if (!prevRow) {
         newRowIds.add(rowId);
-      } else {
+      } else if (prevRow !== row) {
+        // The store keeps the same object for rows that did not change, so
+        // only replaced rows are compared field by field.
         const changedFields = new Set<string>();
         Object.keys(row).forEach((key) => {
-          if (JSON.stringify(row[key as keyof T]) !== JSON.stringify(prevRow[key as keyof T])) {
-            changedFields.add(key);
-          }
+          const value = row[key as keyof T];
+          const previous = prevRow[key as keyof T];
+          const changed =
+            typeof value === 'object' && value !== null
+              ? JSON.stringify(value) !== JSON.stringify(previous)
+              : value !== previous;
+          if (changed) changedFields.add(key);
         });
         if (changedFields.size > 0) {
           changedCellsMap.set(rowId, changedFields);
