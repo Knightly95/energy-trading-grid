@@ -95,10 +95,38 @@ What this shows:
 - A CPU profile shows the cost is re-rendering the whole grid on every single change (plus the highlight timers), not the DOM size.
 
 Next step: apply incoming changes in batches, at most once per frame, and measure again with the same script.
+### Quality checks
+
+A second CI job builds the app and checks what visitors get:
+
+- **Lighthouse** (mobile settings): the build fails if accessibility drops below 95 or best practices below 90; performance and SEO are reported. Last run: performance 99, accessibility 100, best practices 100, SEO 100.
+- **Bundle budget:** the JavaScript sent to the browser must stay under 365 kB gzip (today: 346.5 kB). To check locally: `npm run build && node scripts/bundle-budget.mjs dist 365`.
+
+The Lighthouse report is attached to each CI run.
 
 ## Deployment
 
 Every push to `main` is linted, tested (unit and end-to-end), built and deployed to GitHub Pages by [`.github/workflows/deploy.yml`](.github/workflows/deploy.yml).
+
+## How AI was used
+
+Since November 2026 I maintain this repo with an AI coding agent (Claude Code). The original assessment code is described in the background note at the top.
+
+**What the agent did**
+
+- Built the in-browser backend (a simulated socket server), so the live demo runs with no servers.
+- Set up CI with unit, integration and Playwright tests, and the GitHub Pages deploy.
+- Added the screenshots, `CONTRIBUTING.md`, `AGENTS.md`, templates, the coverage badge and the Lighthouse and bundle-size checks.
+
+**How it is checked**
+
+- The agent follows [AGENTS.md](AGENTS.md): commands, conventions and what it must not do.
+- Every change goes through a pull request. I read the diff and merge it myself; nothing is pushed straight to `main`.
+- CI runs lint, the 99 unit and integration tests and the Playwright tests on every pull request, plus the Lighthouse and bundle-size checks.
+
+**Where it needed correcting**
+
+On Windows, starting the tests from a lowercase `c:` path made the test runner load modules twice, and coverage showed 37% instead of 93%. The number was checked against CI before it went into the badge.
 
 ## Documentation
 
