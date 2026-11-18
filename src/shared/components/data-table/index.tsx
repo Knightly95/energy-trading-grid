@@ -9,6 +9,7 @@ import type { SxProps, Theme } from '@mui/material/styles';
 
 import { useRowChangeDetection } from './hooks/useRowChangeDetection';
 import { dataGridAnimationStyles } from './styles';
+import { readBenchmarkOptions } from '@/shared/utils/benchmark';
 
 export interface RowAction<T> {
   label: string;
@@ -36,7 +37,8 @@ export function DataTable<T extends { id: string | number }>({
   pageSizeOptions = [10, 25, 50, 100],
   sx,
 }: DataTableProps<T>) {
-  const paginationModel = { page: 0, pageSize: pageSizeOptions[0] };
+  const bench = readBenchmarkOptions();
+  const paginationModel = { page: 0, pageSize: bench.pageSize ?? pageSizeOptions[0] };
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const [selectedRow, setSelectedRow] = useState<T | null>(null);
   const { newRows, changedCells } = useRowChangeDetection(rows);
@@ -87,6 +89,7 @@ export function DataTable<T extends { id: string | number }>({
           columns={allColumns}
           initialState={{ pagination: { paginationModel } }}
           pageSizeOptions={pageSizeOptions}
+          disableVirtualization={!bench.virtualization}
           checkboxSelection={checkboxSelection}
           getRowClassName={(params) => (newRows.has(params.id) ? 'row-flash-new' : '')}
           getCellClassName={(params) => {

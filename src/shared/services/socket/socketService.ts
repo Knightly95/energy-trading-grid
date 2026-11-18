@@ -4,6 +4,7 @@ import type { Offer } from '@/shared/types/offer';
 import { config } from '@/config';
 import { MockSocket } from '@/mocks/mockSocket';
 import seedOffers from '@/mocks/data/offers.json';
+import { growSeed, readBenchmarkOptions } from '@/shared/utils/benchmark';
 
 import type {
   OfferRemovedPayload,
@@ -29,7 +30,7 @@ class SocketService {
     this.socket =
       config.backend === 'mock'
         ? // The mock implements the subset of the Socket API this service uses.
-          (new MockSocket(seedOffers as Offer[]) as unknown as Socket)
+          (this.createMockSocket() as unknown as Socket)
         : io(config.socket.url, {
             reconnection: true,
             reconnectionDelay: 1000,
@@ -37,6 +38,16 @@ class SocketService {
           });
 
     this.setupEventListeners();
+  }
+
+  /** The in-browser backend, optionally under benchmark load (see benchmark.ts). */
+  private createMockSocket(): MockSocket {
+    const bench = readBenchmarkOptions();
+    const seed = seedOffers as Offer[];
+    return new MockSocket(
+      bench.rows ? growSeed(seed, bench.rows) : seed,
+      bench.tickMs ? { tickMinMs: bench.tickMs, tickMaxMs: bench.tickMs } : {},
+    );
   }
 
   disconnect(): void {
