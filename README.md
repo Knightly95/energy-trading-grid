@@ -76,6 +76,26 @@ The app talks to two services:
 
 CI measures line coverage of the unit and integration tests on every push to `main` and publishes the number shown in the badge above.
 
+## Performance
+
+`node scripts/benchmark-grid.mjs` (after `npm run build`) measures the offers grid in a real browser, with MUI's row virtualization on and off. It uses opt-in URL parameters (`bench-rows`, `bench-tick-ms`, `bench-page-size`, `bench-virtualization`; see `src/shared/utils/benchmark.ts`) to seed the in-browser backend with more offers and make it change them faster. The CPU is slowed down 4× to resemble a mid-range laptop. Results are the median of 3 runs over 5 seconds, measured 18 Nov 2026:
+
+| Load | Rows per page | Virtualization on | Virtualization off |
+|---|---|---|---|
+| Demo: 32 offers, one change every 4 s | 32 | 58 fps | 60 fps |
+| 1,000 offers, 5 changes per second | 100 | 10 fps | 8 fps |
+| 1,000 offers, 50 changes per second | 100 | 5 fps | 5 fps |
+| 100 offers, 50 changes per second | 100 | 5 fps | 6 fps |
+
+What this shows:
+
+- At the demo's real load the grid is smooth.
+- Under heavy load the page stops being responsive: the main thread is busy more than 90% of the time.
+- Virtualization makes no difference here. The grid grows to fit its rows instead of scrolling inside a fixed height, so all 100 rows of a page are always rendered.
+- A CPU profile shows the cost is re-rendering the whole grid on every single change (plus the highlight timers), not the DOM size.
+
+Next step: apply incoming changes in batches, at most once per frame, and measure again with the same script.
+
 ## Deployment
 
 Every push to `main` is linted, tested (unit and end-to-end), built and deployed to GitHub Pages by [`.github/workflows/deploy.yml`](.github/workflows/deploy.yml).
